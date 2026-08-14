@@ -1,0 +1,327 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   CSS CUSTOM PROPERTIES — Design Tokens
+   ============================================================ */
+:root {
+  /* Colors */
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+
+  /* Light mode surfaces */
+  --bg-base: #f8fafc;
+  --bg-card: #ffffff;
+  --bg-sidebar: #ffffff;
+  --bg-elevated: #f1f5f9;
+  --border-color: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+}
+
+.dark {
+  /* Dark mode surfaces */
+  --bg-base: #0f172a;
+  --bg-card: #1e293b;
+  --bg-sidebar: #0f172a;
+  --bg-elevated: #1e293b;
+  --border-color: rgba(255, 255, 255, 0.08);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+}
+
+/* ============================================================
+   BASE STYLES
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-surface-900 text-slate-100 font-sans antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-500;
+  }
+}
+
+/* ============================================================
+   COMPONENT STYLES
+   ============================================================ */
+@layer components {
+
+  /* Glass card */
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 shadow-glass;
+  }
+
+  .glass-hover {
+    @apply glass transition-all duration-200 hover:bg-white/10 hover:border-white/20;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-surface-800 border border-white/10 rounded-xl shadow-card;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-200 hover:border-white/20 hover:shadow-glass cursor-pointer;
+  }
+
+  /* Sidebar item */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-lg text-slate-400 text-sm font-medium
+           transition-all duration-150 cursor-pointer
+           hover:bg-white/10 hover:text-slate-100;
+  }
+
+  .sidebar-item-active {
+    @apply sidebar-item bg-primary-500/15 text-primary-400 hover:bg-primary-500/20 hover:text-primary-300;
+  }
+
+  /* Input */
+  .input-base {
+    @apply w-full rounded-lg px-3 py-2 text-sm
+           bg-surface-700 border border-white/10 text-slate-100
+           placeholder:text-slate-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50
+           transition-all duration-150;
+  }
+
+  .input-error {
+    @apply input-base border-red-500/50 focus:ring-red-500/50;
+  }
+
+  /* Button variants */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg font-medium text-sm
+           transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-500 shadow-glow-sm;
+  }
+
+  .btn-secondary {
+    @apply btn bg-white/10 text-slate-300 border border-white/10 hover:bg-white/15 hover:text-white;
+  }
+
+  .btn-ghost {
+    @apply btn text-slate-400 hover:bg-white/10 hover:text-slate-100;
+  }
+
+  .btn-danger {
+    @apply btn bg-red-500/15 text-red-400 border border-red-500/20 hover:bg-red-500/25;
+  }
+
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .btn-md { @apply px-4 py-2 text-sm; }
+  .btn-lg { @apply px-5 py-2.5 text-base; }
+
+  /* Priority colors */
+  .priority-urgent {
+    @apply bg-red-500/15 text-red-400 border border-red-500/25;
+  }
+  .priority-high {
+    @apply bg-orange-500/15 text-orange-400 border border-orange-500/25;
+  }
+  .priority-medium {
+    @apply bg-yellow-500/15 text-yellow-400 border border-yellow-500/25;
+  }
+  .priority-low {
+    @apply bg-blue-500/15 text-blue-400 border border-blue-500/25;
+  }
+
+  /* Status colors */
+  .status-todo { @apply bg-slate-500/15 text-slate-400; }
+  .status-in-progress { @apply bg-blue-500/15 text-blue-400; }
+  .status-in-review { @apply bg-purple-500/15 text-purple-400; }
+  .status-done { @apply bg-emerald-500/15 text-emerald-400; }
+  .status-cancelled { @apply bg-red-500/15 text-red-400; }
+
+  /* Kanban column */
+  .kanban-column {
+    @apply flex flex-col w-72 min-w-72 rounded-xl bg-surface-900/80 border border-white/10
+           flex-shrink-0;
+  }
+
+  /* Task card */
+  .task-card {
+    @apply card-hover p-3 rounded-lg cursor-grab active:cursor-grabbing
+           select-none;
+  }
+
+  /* Tag / Badge */
+  .tag {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-t border-white/10 my-1;
+  }
+
+  /* Page header */
+  .page-header {
+    @apply mb-6 flex items-start justify-between;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-slate-100;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    @apply absolute z-50 px-2 py-1 text-xs font-medium text-white bg-slate-700
+           rounded-md shadow-lg whitespace-nowrap pointer-events-none
+           animate-fade-in;
+  }
+
+  /* Skeleton */
+  .skeleton {
+    @apply animate-pulse bg-white/10 rounded-lg;
+  }
+
+  /* Dropdown */
+  .dropdown-menu {
+    @apply absolute z-50 mt-1 min-w-48 rounded-xl bg-surface-800 border border-white/10
+           shadow-glass py-1 animate-scale-in;
+  }
+
+  .dropdown-item {
+    @apply flex items-center gap-2 px-3 py-2 text-sm text-slate-300
+           hover:bg-white/10 hover:text-slate-100 cursor-pointer transition-colors duration-100;
+  }
+
+  /* Modal */
+  .modal-overlay {
+    @apply fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4
+           animate-fade-in;
+  }
+
+  .modal-content {
+    @apply bg-surface-800 border border-white/10 rounded-2xl shadow-glass
+           w-full animate-scale-in;
+  }
+
+  /* Notification badge */
+  .notif-badge {
+    @apply absolute -top-1 -right-1 min-w-5 h-5 px-1 flex items-center justify-center
+           text-xs font-bold text-white bg-red-500 rounded-full;
+  }
+
+  /* Toast */
+  .toast {
+    @apply flex items-center gap-3 px-4 py-3 rounded-xl border shadow-glass text-sm
+           animate-slide-in-right;
+  }
+
+  .toast-success { @apply bg-emerald-900/80 border-emerald-500/30 text-emerald-100; }
+  .toast-error { @apply bg-red-900/80 border-red-500/30 text-red-100; }
+  .toast-info { @apply bg-primary-900/80 border-primary-500/30 text-primary-100; }
+  .toast-warning { @apply bg-amber-900/80 border-amber-500/30 text-amber-100; }
+
+  /* Progress bar */
+  .progress-bar {
+    @apply h-1.5 rounded-full bg-white/10 overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full bg-primary-500 transition-all duration-500;
+  }
+}
+
+/* ============================================================
+   UTILITY STYLES
+   ============================================================ */
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-400 to-violet-400 bg-clip-text text-transparent;
+  }
+
+  .border-gradient {
+    background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.15));
+    border: 1px solid rgba(99,102,241,0.3);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+}
+
+/* ============================================================
+   DRAG AND DROP
+   ============================================================ */
+.dnd-dragging {
+  @apply opacity-50 scale-95 rotate-1;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.dnd-over {
+  @apply bg-primary-500/10 border-primary-500/30;
+}
+
+/* ============================================================
+   RECHARTS OVERRIDES
+   ============================================================ */
+.recharts-tooltip-wrapper .recharts-default-tooltip {
+  @apply !bg-surface-800 !border-white/10 !rounded-xl !shadow-glass;
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(255, 255, 255, 0.06) !important;
+}
+
+.recharts-text {
+  fill: #94a3b8 !important;
+}

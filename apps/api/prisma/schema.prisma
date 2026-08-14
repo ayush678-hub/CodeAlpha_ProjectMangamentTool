@@ -1,0 +1,477 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum ProjectRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_MENTION
+  COMMENT_MENTION
+  COMMENT_ADDED
+  DEADLINE_APPROACHING
+  TASK_STATUS_CHANGED
+  PROJECT_INVITE
+  TASK_OVERDUE
+  MEMBER_JOINED
+  INFO
+}
+
+// ============================================================
+// USER
+// ============================================================
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  username      String     @unique
+  email         String     @unique
+  password      String
+  avatar        String?
+  bio           String?
+  jobTitle      String?
+  timezone      String     @default("UTC")
+  status        UserStatus @default(ACTIVE)
+  emailVerified Boolean    @default(false)
+  verifyToken   String?    @unique
+  resetToken    String?    @unique
+  resetTokenExp DateTime?
+
+  // Relations
+  ownedProjects    Project[]          @relation("ProjectOwner")
+  projectMembers   ProjectMember[]
+  reportedTasks    Task[]             @relation("TaskReporter")
+  assignedTasks    TaskAssignee[]
+  comments         Comment[]
+  commentReactions CommentReaction[]
+  notifications    Notification[]     @relation("NotificationRecipient")
+  actorNotifs      Notification[]     @relation("NotificationActor")
+  activities       Activity[]
+  invitationsSent  Invitation[]       @relation("InvitedBy")
+  refreshTokens    RefreshToken[]
+  attachments      Attachment[]
+  timeEntries      TimeEntry[]
+  notifPrefs       NotificationPref?
+  commentMentions  CommentMention[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([username])
+}
+
+model NotificationPref {
+  id                 String  @id @default(cuid())
+  userId             String  @unique
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailOnTaskAssign  Boolean @default(true)
+  emailOnMention     Boolean @default(true)
+  emailOnComment     Boolean @default(false)
+  emailOnDeadline    Boolean @default(true)
+  emailOnProjectInvite Boolean @default(true)
+  pushOnTaskAssign   Boolean @default(true)
+  pushOnMention      Boolean @default(true)
+  pushOnComment      Boolean @default(true)
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([token])
+  @@index([userId])
+}
+
+// ============================================================
+// PROJECT
+// ============================================================
+
+model Project {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(PLANNING)
+  color       String        @default("#6366f1")
+  icon        String?
+  startDate   DateTime?
+  dueDate     DateTime?
+  ownerId     String
+  owner       User          @relation("ProjectOwner", fields: [ownerId], references: [id])
+
+  // Relations
+  members     ProjectMember[]
+  board       Board?
+  tasks       Task[]
+  labels      Label[]
+  invitations Invitation[]
+  activities  Activity[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      ProjectRole @default(MEMBER)
+  joinedAt  DateTime    @default(now())
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+}
+
+model Invitation {
+  id          String           @id @default(cuid())
+  email       String
+  token       String           @unique @default(cuid())
+  role        ProjectRole      @default(MEMBER)
+  status      InvitationStatus @default(PENDING)
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  invitedById String
+  invitedBy   User             @relation("InvitedBy", fields: [invitedById], references: [id])
+  expiresAt   DateTime
+  createdAt   DateTime         @default(now())
+
+  @@index([token])
+  @@index([email])
+  @@index([projectId])
+}
+
+// ============================================================
+// BOARD & COLUMNS
+// ============================================================
+
+model Board {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  columns   Column[]
+  createdAt DateTime @default(now())
+}
+
+model Column {
+  id      String @id @default(cuid())
+  name    String
+  order   Int
+  color   String?
+  boardId String
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks   Task[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([boardId])
+  @@index([order])
+}
+
+// ============================================================
+// TASK
+// ============================================================
+
+model Task {
+  id             String       @id @default(cuid())
+  title          String
+  description    String?
+  status         TaskStatus   @default(TODO)
+  priority       TaskPriority @default(MEDIUM)
+  order          Int          @default(0)
+  columnId       String
+  column         Column       @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  projectId      String
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  reporterId     String
+  reporter       User         @relation("TaskReporter", fields: [reporterId], references: [id])
+  startDate      DateTime?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  estimatedHours Float?
+  archived       Boolean      @default(false)
+
+  // Relations
+  assignees   TaskAssignee[]
+  labels      TaskLabel[]
+  subtasks    Subtask[]
+  comments    Comment[]
+  attachments Attachment[]
+  activities  Activity[]
+  timeEntries TimeEntry[]
+  blockedBy   TaskDependency[] @relation("BlockedTask")
+  blocking    TaskDependency[] @relation("BlockingTask")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([columnId])
+  @@index([projectId])
+  @@index([reporterId])
+  @@index([status])
+  @@index([priority])
+  @@index([dueDate])
+  @@index([order])
+}
+
+model TaskAssignee {
+  id     String @id @default(cuid())
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+}
+
+model TaskDependency {
+  id           String @id @default(cuid())
+  blockingId   String
+  blocking     Task   @relation("BlockingTask", fields: [blockingId], references: [id], onDelete: Cascade)
+  blockedId    String
+  blocked      Task   @relation("BlockedTask", fields: [blockedId], references: [id], onDelete: Cascade)
+  dependencyType String @default("BLOCKS")
+
+  @@unique([blockingId, blockedId])
+}
+
+model Subtask {
+  id        String   @id @default(cuid())
+  title     String
+  completed Boolean  @default(false)
+  order     Int      @default(0)
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+}
+
+// ============================================================
+// LABELS
+// ============================================================
+
+model Label {
+  id        String      @id @default(cuid())
+  name      String
+  color     String      @default("#6366f1")
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     TaskLabel[]
+
+  @@unique([name, projectId])
+  @@index([projectId])
+}
+
+model TaskLabel {
+  taskId  String
+  task    Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  labelId String
+  label   Label  @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+}
+
+// ============================================================
+// COMMENTS
+// ============================================================
+
+model Comment {
+  id       String  @id @default(cuid())
+  content  String
+  taskId   String
+  task     Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User    @relation(fields: [authorId], references: [id])
+  parentId String?
+  parent   Comment?  @relation("Replies", fields: [parentId], references: [id])
+  replies  Comment[] @relation("Replies")
+  isEdited Boolean   @default(false)
+
+  reactions CommentReaction[]
+  mentions  CommentMention[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+  @@index([authorId])
+  @@index([parentId])
+}
+
+model CommentReaction {
+  id        String  @id @default(cuid())
+  emoji     String
+  commentId String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId, emoji])
+  @@index([commentId])
+}
+
+model CommentMention {
+  id        String  @id @default(cuid())
+  commentId String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+}
+
+// ============================================================
+// ATTACHMENTS
+// ============================================================
+
+model Attachment {
+  id           String   @id @default(cuid())
+  name         String
+  url          String
+  publicId     String?  // Cloudinary public ID
+  mimeType     String
+  size         Int
+  taskId       String
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@index([taskId])
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  userId    String
+  user      User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?            @relation("NotificationActor", fields: [actorId], references: [id])
+  projectId String?
+  project   Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskId    String?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+}
+
+// ============================================================
+// ACTIVITY / AUDIT LOG
+// ============================================================
+
+model Activity {
+  id          String   @id @default(cuid())
+  action      String
+  description String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskId      String?
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@index([taskId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// TIME TRACKING
+// ============================================================
+
+model TimeEntry {
+  id          String    @id @default(cuid())
+  description String?
+  hours       Float
+  date        DateTime  @default(now())
+  taskId      String
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([taskId])
+  @@index([userId])
+}
